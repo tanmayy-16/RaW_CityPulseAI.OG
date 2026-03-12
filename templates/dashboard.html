@@ -1,0 +1,366 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>CityPulse AI — Urban Risk Intelligence</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+
+<!-- External CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+</head>
+
+<body>
+
+<!-- Rain animation -->
+<div class="rain-container" id="rainContainer"></div>
+
+<div class="wrapper">
+
+<!-- HEADER -->
+<header>
+
+<div class="logo">
+
+<div class="logo-icon">
+<img src="{{ url_for('static', filename='logo.png') }}" alt="CityPulse Logo">
+</div>
+
+<div class="logo-text">
+<h1>CityPulse AI</h1>
+<p>Mapping the future with data</p>
+</div>
+
+</div>
+
+<div class="header-right">
+
+<div class="live-badge">
+<div class="live-dot"></div> LIVE
+</div>
+
+</div>
+
+</header>
+
+
+<!-- WEATHER BANNER -->
+<div class="weather-banner">
+
+<div class="weather-item">
+<label>Condition</label>
+<value id="wMain">—</value>
+</div>
+
+<div class="sep"></div>
+
+<div class="weather-item">
+<label>Description</label>
+<value id="wDesc">—</value>
+</div>
+
+<div class="sep"></div>
+
+<div class="weather-item">
+<label>Rain Level</label>
+<value id="wLevel" class="rain-level">—</value>
+</div>
+
+<div class="sep"></div>
+
+<div class="weather-item">
+<label>City</label>
+<value id="wCity" style="color:var(--accent2)">—</value>
+</div>
+
+<div class="sep"></div>
+
+<div class="weather-item">
+<label>Last Updated</label>
+<value id="wTime">—</value>
+</div>
+
+</div>
+
+
+<!-- FLOW DIAGRAM -->
+<div class="chart-panel" style="margin-bottom:28px">
+
+<div class="panel-header">
+
+<div>
+<div class="panel-title">Event Chain — Causal Flow</div>
+<div class="panel-sub" id="flowSubtitle">
+Detecting weather → Analysing risk propagation
+</div>
+</div>
+
+<div class="panel-badge" id="flowBadge">FLOW</div>
+
+</div>
+
+<div class="flow-diagram" id="flowDiagram"></div>
+
+</div>
+
+
+<!-- CHARTS -->
+<div class="charts-grid">
+
+<!-- PIE -->
+<div class="chart-panel">
+
+<div class="panel-header">
+
+<div>
+<div class="panel-title" id="pieTitle">Risk Distribution</div>
+<div class="panel-sub" id="pieSub">
+Probability breakdown across all events
+</div>
+</div>
+
+<div class="panel-badge" id="pieBadge">PIE</div>
+
+</div>
+
+<div class="chart-container" style="height:260px">
+<canvas id="pieChart"></canvas>
+</div>
+
+</div>
+
+
+<!-- LINE -->
+<div class="chart-panel">
+
+<div class="panel-header">
+
+<div>
+<div class="panel-title" id="lineTitle">
+Risk Escalation Across Rain Intensities
+</div>
+
+<div class="panel-sub" id="lineSub">
+Simulated probability at each rain level
+</div>
+</div>
+
+<div class="panel-badge" id="lineBadge">TREND</div>
+
+</div>
+
+<div class="chart-container" style="height:260px">
+<canvas id="lineChart"></canvas>
+</div>
+
+</div>
+
+</div>
+
+
+<!-- ALERT SECTION -->
+<div class="alert-panel">
+
+<div class="panel-header">
+<div>
+<div class="panel-title">Risk Alert</div>
+<div class="panel-sub">AI generated warning based on current conditions</div>
+</div>
+</div>
+
+<div class="alert-box" id="alertMessage">
+⚠️ Monitoring weather conditions...
+</div>
+
+</div>
+
+
+<!-- AREA BREAKDOWN PANEL -->
+<div class="chart-panel" id="areaPanelWrap" style="margin-bottom:28px">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">📍 Area-Level Risk Breakdown</div>
+      <div class="panel-sub" id="areaPanelSub">Locality-by-locality risk analysis — ranked by severity</div>
+    </div>
+    <div id="areaBadge" class="flow-badge" style="font-size:11px">📍 AREAS</div>
+  </div>
+
+  <div id="areaGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:18px">
+    <!-- populated by JS -->
+    <div style="color:var(--muted);font-size:12px;text-align:center;padding:24px;grid-column:1/-1">Loading area data…</div>
+  </div>
+
+  <div id="areaSummaryBar" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;padding:14px 0 0;border-top:1px solid var(--border)">
+    <!-- summary chips populated by JS -->
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+
+<div>CityPulse — Mapping the future with data</div>
+<div>Built for Codebits 4.0 Hackathon · 2026</div>
+
+</footer>
+
+</div>
+
+
+<!-- Dashboard Logic -->
+<script src="{{ url_for('static', filename='JS/script.js') }}"></script>
+
+<script>
+/* ── Get saved city from landing page ── */
+const savedCity = localStorage.getItem("selectedCity");
+if (!savedCity) {
+  alert("Please select a city first.");
+  window.location.href = "/";
+}
+
+/* ── AI Alert updater — uses message from backend ── */
+function updateAlert(aiAlert, weatherType, rainLevel) {
+  const alertBox = document.getElementById("alertMessage");
+  if (!alertBox) return;
+
+  // Colour theme per severity
+  const themes = {
+    critical:    { bg:"#fee2e2", color:"#991b1b", border:"#fecaca" },
+    high:        { bg:"#fff7ed", color:"#9a3412", border:"#fed7aa" },
+    moderate:    { bg:"#fefce8", color:"#854d0e", border:"#fde68a" },
+    low:         { bg:"#ecfdf5", color:"#065f46", border:"#a7f3d0" },
+    info:        { bg:"#eff6ff", color:"#1e40af", border:"#bfdbfe" },
+  };
+
+  let theme = themes.low;
+  if (weatherType === "thunderstorm")               theme = themes.critical;
+  else if (rainLevel === "extreme" || rainLevel === "heavy") theme = themes.critical;
+  else if (rainLevel === "moderate")                theme = themes.high;
+  else if (rainLevel === "light")                   theme = themes.moderate;
+  else if (weatherType === "haze")                  theme = themes.info;
+
+  alertBox.innerHTML     = aiAlert || "⚠️ Monitoring weather conditions...";
+  alertBox.style.background = theme.bg;
+  alertBox.style.color      = theme.color;
+  alertBox.style.borderColor = theme.border;
+}
+
+/* ── Override loadData to also update alert from API ── */
+const _origLoad = loadData;
+window.loadData = async function(city) {
+  city = city || savedCity;
+  try {
+    const res  = await fetch(`/risk?city=${encodeURIComponent(city)}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+
+    // Update alert from backend AI
+    updateAlert(data.ai_alert, data.weather_type, data.weather.rain_level);
+
+    // Pass to script.js renderData
+    renderData(data.weather, data.probabilities, data.risk_levels, city);
+  } catch {
+    // Fallback to original if backend unreachable
+    _origLoad(city);
+  }
+};
+
+/* ── Area breakdown loader ── */
+const RISK_SCORE_THEME = (s) => {
+  if (s > 60) return { bg:"#fee2e2", color:"#991b1b", border:"#fecaca", label:"CRITICAL" };
+  if (s > 40) return { bg:"#fff7ed", color:"#9a3412", border:"#fed7aa", label:"HIGH" };
+  if (s > 20) return { bg:"#fefce8", color:"#854d0e", border:"#fde68a", label:"MODERATE" };
+  return           { bg:"#ecfdf5", color:"#065f46", border:"#a7f3d0", label:"LOW" };
+};
+
+async function loadAreaData(city) {
+  const grid    = document.getElementById("areaGrid");
+  const summary = document.getElementById("areaSummaryBar");
+  const sub     = document.getElementById("areaPanelSub");
+  if (!grid) return;
+  grid.innerHTML = `<div style="color:var(--muted);font-size:12px;text-align:center;padding:24px;grid-column:1/-1">Loading area data for <strong>${city}</strong>…</div>`;
+  try {
+    const res  = await fetch(`/risk/areas?city=${encodeURIComponent(city)}`);
+    if (!res.ok) throw new Error("no data");
+    const data = await res.json();
+    const areas = data.areas || [];
+    if (!areas.length) { grid.innerHTML = `<div style="color:var(--muted);font-size:12px;text-align:center;padding:24px;grid-column:1/-1">No area data available.</div>`; return; }
+
+    sub.textContent = `${areas.length} localities analysed · ranked by risk score`;
+
+    grid.innerHTML = areas.map((a, idx) => {
+      const t   = RISK_SCORE_THEME(a.risk_score);
+      const tags = (a.tags||[]).map(tag => `<span style="font-size:10px;background:rgba(0,0,0,0.06);padding:2px 7px;border-radius:10px;color:var(--muted)">${tag}</span>`).join(" ");
+      const probKeys = Object.keys(a.probabilities);
+      const probBars = probKeys.map(k => {
+        const p = a.probabilities[k];
+        const pct = (p*100).toFixed(1);
+        const barColor = p > 0.6 ? "#dc2626" : p > 0.35 ? "#ea580c" : p > 0.15 ? "#d97706" : "#16a34a";
+        const label = k.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+        return `<div style="margin-bottom:7px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px">
+            <span>${label}</span><span style="color:${barColor};font-weight:600">${pct}%</span>
+          </div>
+          <div style="height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(100,p*100)}%;background:${barColor};border-radius:3px;transition:width 0.6s ease"></div>
+          </div>
+        </div>`;
+      }).join("");
+      const rankBadge = idx === 0 ? "🔴 #1 HIGHEST RISK" : idx === areas.length-1 ? "🟢 SAFEST" : `#${idx+1}`;
+      return `
+        <div style="background:${t.bg};border:1.5px solid ${t.border};border-radius:14px;padding:16px;animation:fadeUp 0.4s ease both;animation-delay:${idx*0.06}s">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:${t.color}">${a.area}</div>
+              <div style="font-size:10px;color:${t.color};opacity:0.8;margin-top:2px">${a.weather.description || ""} · ${a.weather.temp ?? "—"}°C</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:${t.color}">${a.risk_score}</div>
+              <div style="font-size:9px;font-weight:700;color:${t.color};letter-spacing:1px;text-transform:uppercase">${t.label}</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${tags}</div>
+          <div>${probBars}</div>
+          <div style="margin-top:8px;font-size:10px;color:${t.color};opacity:0.75;font-style:italic">${rankBadge} · ${a.api_live ? "Live API" : "Simulated"}</div>
+        </div>`;
+    }).join("");
+
+    // Summary bar
+    const s = data.summary || {};
+    summary.innerHTML = [
+      { icon:"🏙️", label:"Total Areas",    val: s.total_areas    || areas.length },
+      { icon:"🚨", label:"Critical",       val: s.critical_areas  || 0, color:"#dc2626" },
+      { icon:"🔴", label:"High Risk",      val: s.high_risk_areas || 0, color:"#ea580c" },
+      { icon:"🟢", label:"Safe Areas",     val: s.safe_areas      || 0, color:"#16a34a" },
+      { icon:"📍", label:"Highest Risk",   val: s.highest_risk    || "—" },
+      { icon:"✅", label:"Safest Area",    val: s.safest_area     || "—" },
+    ].map(item => `
+      <div style="display:flex;align-items:center;gap:7px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px">
+        <span>${item.icon}</span>
+        <div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">${item.label}</div>
+          <div style="font-size:13px;font-weight:700;font-family:'Syne',sans-serif;color:${item.color||'var(--text)'}">${item.val}</div>
+        </div>
+      </div>`).join("");
+
+  } catch(err) {
+    grid.innerHTML = `<div style="color:var(--muted);font-size:12px;text-align:center;padding:24px;grid-column:1/-1">Could not load area data. API may be offline.</div>`;
+  }
+}
+
+/* ── Boot ── */
+loadData(savedCity);
+loadAreaData(savedCity);
+setInterval(() => { loadData(savedCity); loadAreaData(savedCity); }, 30000);
+</script>
+
+</body>
+</html>
