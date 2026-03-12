@@ -13,6 +13,29 @@
     --high: #ea580c;
     --critical: #dc2626;
   }
+  .logo {
+display:flex;
+align-items:center;
+gap:12px;
+}
+
+.logo-icon img{
+width:42px;
+height:42px;
+object-fit:contain;
+}
+
+.logo-text h1{
+font-family:'Syne',sans-serif;
+font-size:20px;
+font-weight:800;
+}
+
+.logo-text p{
+font-size:11px;
+color:#64748b;
+letter-spacing:1px;
+}
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
